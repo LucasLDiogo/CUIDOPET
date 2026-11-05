@@ -1,0 +1,10 @@
+{
+  "name": "Cuidopê — cuidado pet",
+  "short_name": "Cuidopê",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F5F7F2",
+  "theme_color": "#1C5B47",
+  "lang": "pt-BR",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

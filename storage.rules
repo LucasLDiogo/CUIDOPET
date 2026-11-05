@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// Cuidopê — Firebase Storage (mesma convenção dos buckets do Supabase: pasta raiz = uid do dono)
+//   pet-photos/{uid}/...      privado: só o dono lê e escreve
+//   provider-media/{uid}/...  público para leitura; só o dono escreve
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isImage() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+    function smallEnough() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    match /pet-photos/{uid}/{fileName} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid && isImage() && smallEnough()
+        && fileName.size() <= 120;
+    }
+
+    match /provider-media/{uid}/{fileName} {
+      allow read: if true;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid && isImage() && smallEnough()
+        && fileName.size() <= 120;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

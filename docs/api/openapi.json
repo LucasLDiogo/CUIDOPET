@@ -1,0 +1,1279 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Cuidopê API",
+    "version": "0.1.0",
+    "description": "Incremento 1: leitura pública (busca, perfil, disponibilidade, regiões) e webhooks. Rotas autenticadas entram no incremento 2 (ver docs/api/endpoints.md)."
+  },
+  "servers": [
+    {
+      "url": "/v1"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "ok"
+          }
+        }
+      }
+    },
+    "/regions": {
+      "get": {
+        "operationId": "listRegions",
+        "parameters": [
+          {
+            "name": "uf",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cidades habilitadas da UF"
+          },
+          "400": {
+            "description": "Erro padronizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search/providers": {
+      "get": {
+        "operationId": "searchProviders",
+        "parameters": [
+          {
+            "name": "uf",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            }
+          },
+          {
+            "name": "city_ibge_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "hospedagem_domiciliar",
+                "creche_diurna",
+                "passeio",
+                "visita_domicilio",
+                "baba_pernoite",
+                "banho",
+                "tosa",
+                "banho_tosa"
+              ]
+            }
+          },
+          {
+            "name": "species",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "type": "string",
+              "enum": [
+                "dog",
+                "cat",
+                "all"
+              ]
+            }
+          },
+          {
+            "name": "neighborhood_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            }
+          },
+          {
+            "name": "pets",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "small",
+                "medium",
+                "large"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "sponsored": {
+                      "maxItems": 2,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider_id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "public_name": {
+                            "type": "string"
+                          },
+                          "bio_short": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "photo_ref": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "city": {
+                            "type": "string"
+                          },
+                          "neighborhood": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "uf": {
+                            "type": "string"
+                          },
+                          "services": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "listing_id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "category": {
+                                  "type": "string",
+                                  "enum": [
+                                    "hospedagem_domiciliar",
+                                    "creche_diurna",
+                                    "passeio",
+                                    "visita_domicilio",
+                                    "baba_pernoite",
+                                    "banho",
+                                    "tosa",
+                                    "banho_tosa"
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "price_cents": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "price_unit": {
+                                  "type": "string",
+                                  "enum": [
+                                    "night",
+                                    "day",
+                                    "hour",
+                                    "walk",
+                                    "visit",
+                                    "service"
+                                  ]
+                                },
+                                "price_is_from": {
+                                  "type": "boolean"
+                                },
+                                "price_variation_note": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "species": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "dog",
+                                      "cat"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "listing_id",
+                                "category",
+                                "title",
+                                "price_cents",
+                                "price_unit",
+                                "price_is_from",
+                                "price_variation_note",
+                                "species"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "rating_avg": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 1,
+                                "maximum": 5
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "rating_count": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "badges": {
+                            "type": "object",
+                            "properties": {
+                              "identity_verified": {
+                                "type": "boolean"
+                              },
+                              "identity_scope": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "professional": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "identity_verified",
+                              "identity_scope",
+                              "professional"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "channels": {
+                            "type": "object",
+                            "properties": {
+                              "whatsapp": {
+                                "type": "boolean"
+                              },
+                              "external_site": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "whatsapp",
+                              "external_site"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "availability": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "unavailable",
+                              "unknown"
+                            ]
+                          },
+                          "sponsored": {
+                            "type": "boolean"
+                          },
+                          "is_demo": {
+                            "type": "boolean"
+                          },
+                          "ranking": {
+                            "type": "object",
+                            "properties": {
+                              "version": {
+                                "type": "string"
+                              },
+                              "score": {
+                                "type": "number"
+                              },
+                              "why": {
+                                "type": "string"
+                              },
+                              "impression_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              }
+                            },
+                            "required": [
+                              "version",
+                              "score",
+                              "why",
+                              "impression_id"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "provider_id",
+                          "slug",
+                          "public_name",
+                          "bio_short",
+                          "photo_ref",
+                          "city",
+                          "neighborhood",
+                          "uf",
+                          "services",
+                          "rating_avg",
+                          "rating_count",
+                          "badges",
+                          "channels",
+                          "availability",
+                          "sponsored",
+                          "is_demo",
+                          "ranking"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "provider_id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "public_name": {
+                            "type": "string"
+                          },
+                          "bio_short": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "photo_ref": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "city": {
+                            "type": "string"
+                          },
+                          "neighborhood": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "uf": {
+                            "type": "string"
+                          },
+                          "services": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "listing_id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "category": {
+                                  "type": "string",
+                                  "enum": [
+                                    "hospedagem_domiciliar",
+                                    "creche_diurna",
+                                    "passeio",
+                                    "visita_domicilio",
+                                    "baba_pernoite",
+                                    "banho",
+                                    "tosa",
+                                    "banho_tosa"
+                                  ]
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "price_cents": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "price_unit": {
+                                  "type": "string",
+                                  "enum": [
+                                    "night",
+                                    "day",
+                                    "hour",
+                                    "walk",
+                                    "visit",
+                                    "service"
+                                  ]
+                                },
+                                "price_is_from": {
+                                  "type": "boolean"
+                                },
+                                "price_variation_note": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "species": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "dog",
+                                      "cat"
+                                    ]
+                                  }
+                                }
+                              },
+                              "required": [
+                                "listing_id",
+                                "category",
+                                "title",
+                                "price_cents",
+                                "price_unit",
+                                "price_is_from",
+                                "price_variation_note",
+                                "species"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "rating_avg": {
+                            "anyOf": [
+                              {
+                                "type": "number",
+                                "minimum": 1,
+                                "maximum": 5
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "rating_count": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "badges": {
+                            "type": "object",
+                            "properties": {
+                              "identity_verified": {
+                                "type": "boolean"
+                              },
+                              "identity_scope": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "professional": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "identity_verified",
+                              "identity_scope",
+                              "professional"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "channels": {
+                            "type": "object",
+                            "properties": {
+                              "whatsapp": {
+                                "type": "boolean"
+                              },
+                              "external_site": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "whatsapp",
+                              "external_site"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "availability": {
+                            "type": "string",
+                            "enum": [
+                              "available",
+                              "unavailable",
+                              "unknown"
+                            ]
+                          },
+                          "sponsored": {
+                            "type": "boolean"
+                          },
+                          "is_demo": {
+                            "type": "boolean"
+                          },
+                          "ranking": {
+                            "type": "object",
+                            "properties": {
+                              "version": {
+                                "type": "string"
+                              },
+                              "score": {
+                                "type": "number"
+                              },
+                              "why": {
+                                "type": "string"
+                              },
+                              "impression_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              }
+                            },
+                            "required": [
+                              "version",
+                              "score",
+                              "why",
+                              "impression_id"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "required": [
+                          "provider_id",
+                          "slug",
+                          "public_name",
+                          "bio_short",
+                          "photo_ref",
+                          "city",
+                          "neighborhood",
+                          "uf",
+                          "services",
+                          "rating_avg",
+                          "rating_count",
+                          "badges",
+                          "channels",
+                          "availability",
+                          "sponsored",
+                          "is_demo",
+                          "ranking"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "next_cursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "empty": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "message": {
+                              "type": "string"
+                            },
+                            "suggestions": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "relax": {
+                                    "type": "string",
+                                    "enum": [
+                                      "dates",
+                                      "species",
+                                      "size",
+                                      "neighborhood"
+                                    ]
+                                  },
+                                  "would_return": {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  }
+                                },
+                                "required": [
+                                  "relax",
+                                  "would_return"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "message",
+                            "suggestions"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "sponsored",
+                    "results",
+                    "next_cursor",
+                    "empty"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro padronizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/providers/{slug}": {
+      "get": {
+        "operationId": "getProvider",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Projeção pública",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$schema": "https://json-schema.org/draft/2020-12/schema",
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "object",
+                      "properties": {
+                        "provider_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "public_name": {
+                          "type": "string"
+                        },
+                        "bio_short": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "photo_ref": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "city": {
+                          "type": "string"
+                        },
+                        "neighborhood": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "uf": {
+                          "type": "string"
+                        },
+                        "services": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "listing_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "category": {
+                                "type": "string",
+                                "enum": [
+                                  "hospedagem_domiciliar",
+                                  "creche_diurna",
+                                  "passeio",
+                                  "visita_domicilio",
+                                  "baba_pernoite",
+                                  "banho",
+                                  "tosa",
+                                  "banho_tosa"
+                                ]
+                              },
+                              "title": {
+                                "type": "string"
+                              },
+                              "price_cents": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "price_unit": {
+                                "type": "string",
+                                "enum": [
+                                  "night",
+                                  "day",
+                                  "hour",
+                                  "walk",
+                                  "visit",
+                                  "service"
+                                ]
+                              },
+                              "price_is_from": {
+                                "type": "boolean"
+                              },
+                              "price_variation_note": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "species": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "enum": [
+                                    "dog",
+                                    "cat"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "listing_id",
+                              "category",
+                              "title",
+                              "price_cents",
+                              "price_unit",
+                              "price_is_from",
+                              "price_variation_note",
+                              "species"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "rating_avg": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 1,
+                              "maximum": 5
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "rating_count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "badges": {
+                          "type": "object",
+                          "properties": {
+                            "identity_verified": {
+                              "type": "boolean"
+                            },
+                            "identity_scope": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "professional": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "identity_verified",
+                            "identity_scope",
+                            "professional"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "channels": {
+                          "type": "object",
+                          "properties": {
+                            "whatsapp": {
+                              "type": "boolean"
+                            },
+                            "external_site": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "whatsapp",
+                            "external_site"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "is_demo": {
+                          "type": "boolean"
+                        },
+                        "bio": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "provider_id",
+                        "slug",
+                        "public_name",
+                        "bio_short",
+                        "photo_ref",
+                        "city",
+                        "neighborhood",
+                        "uf",
+                        "services",
+                        "rating_avg",
+                        "rating_count",
+                        "badges",
+                        "channels",
+                        "is_demo",
+                        "bio"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "reviews": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              "scores": {
+                                "type": "object",
+                                "properties": {
+                                  "communication": {
+                                    "type": "number"
+                                  },
+                                  "punctuality": {
+                                    "type": "number"
+                                  },
+                                  "care": {
+                                    "type": "number"
+                                  },
+                                  "match": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "communication",
+                                  "punctuality",
+                                  "care",
+                                  "match"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "comment": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "label": {
+                                "type": "string",
+                                "enum": [
+                                  "reserva_paga",
+                                  "externa_confirmada"
+                                ]
+                              },
+                              "provider_reply": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "created_at": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "scores",
+                              "comment",
+                              "label",
+                              "provider_reply",
+                              "created_at"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "distribution": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        }
+                      },
+                      "required": [
+                        "items",
+                        "distribution"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "reviews"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro padronizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/listings/{id}/availability": {
+      "get": {
+        "operationId": "getAvailability",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+            }
+          },
+          {
+            "name": "pets",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ available: boolean }"
+          },
+          "400": {
+            "description": "Erro padronizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro padronizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webhooks/{provider}": {
+      "post": {
+        "operationId": "receiveWebhook",
+        "description": "Valida assinatura HMAC, persiste (deduplicado) e processa na sequência. Responde após persistência durável.",
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "sandbox"
+              ]
+            }
+          },
+          {
+            "name": "x-signature",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "type": "object",
+                "properties": {
+                  "event_id": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 100
+                  },
+                  "type": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 60
+                  },
+                  "payment_id": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 100
+                  },
+                  "status": {
+                    "type": "string",
+                    "maxLength": 40
+                  }
+                },
+                "required": [
+                  "event_id",
+                  "type",
+                  "payment_id"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "{ received: true, duplicate: boolean }"
+          },
+          "400": {
+            "description": "Erro padronizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro padronizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Problem": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "code": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
+          },
+          "correlation_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code",
+          "correlation_id"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

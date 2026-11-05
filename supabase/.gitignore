@@ -1,0 +1,7 @@
+# Supabase CLI
+.branches
+.temp
+# segredos locais das edge functions
+.env
+.env.*
+!.env.example

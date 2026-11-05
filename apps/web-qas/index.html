@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cuidopê QAS</title>
+<link rel="stylesheet" href="/qas/app.css">
+</head>
+<body>
+<div class="env-banner" role="status">
+  <strong>AMBIENTE DE TESTE (QAS)</strong> · dados fictícios · pagamento <strong>SANDBOX</strong>: nenhum dinheiro real é cobrado · não é login real
+</div>
+<header class="top">
+  <h1>Cuidopê <small>QAS</small></h1>
+  <label class="persona">Testar como
+    <select id="persona" aria-label="Persona de teste"></select>
+  </label>
+</header>
+<div id="modebar" class="modebar" hidden></div>
+<nav id="tabs" class="tabs" aria-label="Seções"></nav>
+<main id="view" tabindex="-1"></main>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<details id="log" class="log">
+  <summary>Log de chamadas (apoio ao QA)</summary>
+  <ol id="loglist"></ol>
+</details>
+<script src="/qas/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+rules_version = '2';
+
+// =====================================================================================
+// Cuidopê — regras do Firestore (mesma lógica de acesso da RLS do Supabase)
+//  - deny by default: tudo que não estiver explicitamente liberado é negado
+//  - público lê só prestadores publicados, serviços/pacotes ativos e avaliações
+//  - dono por request.auth.uid; campos sensíveis (status, preço, nota, contadores) imutáveis pelo cliente,
+//    validados com diff().affectedKeys()
+//  - validação de tipos e tamanhos em todas as escritas
+// Coleções e campos: ver apps/web/src/data/firebaseAdapter.ts
+// =====================================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /* ---------------- utilitários ---------------- */
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function incoming() { return request.resource.data; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function onlyChanged(keys) { return changed().hasOnly(keys); }
+    function str(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+    function optStr(d, k, max) { return !(k in d) || d[k] == null || (d[k] is string && d[k].size() <= max); }
+    function intIn(v, min, max) { return v is int && v >= min && v <= max; }
+    function money(v) { return intIn(v, 0, 100000000); }
+    function e164(v) { return v is string && v.matches('^[+]55[1-9]{2}9?[0-9]{8}$'); }
+    function providerOf(id) { return get(/databases/$(database)/documents/providers/$(id)).data; }
+    function ownsProvider(id) {
+      return signedIn() && exists(/databases/$(database)/documents/providers/$(id)) && providerOf(id).ownerUserId == me();
+    }
+    function listOf(v, allowed, min, max) { return v is list && v.size() >= min && v.size() <= max && v.toSet().difference(allowed.toSet()).size() == 0; }
+
+    function categories() { return ['passeio','pet_sitter','hospedagem','creche','banho_tosa','petshop','adestramento','vet_domicilio']; }
+    function speciesAll() { return ['cao','gato']; }
+    function sizesAll() { return ['mini','pequeno','medio','grande','gigante']; }
+    function bookingStatuses() { return ['pendente','aguardando_cliente','confirmado','em_atendimento','concluido','cancelado','recusado','nao_compareceu']; }
+
+    // espelho de BOOKING_TRANSITIONS (apps/web/src/domain/rules.ts) e de app.booking_transitions (Supabase)
+    function canTransition(from, to) {
+      return (from == 'pendente' && to in ['aguardando_cliente','confirmado','recusado','cancelado'])
+          || (from == 'aguardando_cliente' && to in ['confirmado','cancelado','pendente'])
+          || (from == 'confirmado' && to in ['em_atendimento','cancelado','nao_compareceu'])
+          || (from == 'em_atendimento' && to == 'concluido');
+    }
+    function timelineAppended() {
+      return incoming().timeline is list && incoming().timeline.size() == resource.data.timeline.size() + 1
+          && incoming().timeline.size() <= 100;
+    }
+
+    /* ---------------- usuários ---------------- */
+    match /users/{uid} {
+      function validUser(d) {
+        return d.keys().hasOnly(['role','name','providerId','createdAt']) && str(d.name, 1, 120) && d.role in ['tutor','prestador'];
+      }
+      // papel "prestador" só quando o provider (gravado no mesmo batch) pertence ao próprio usuário
+      function providerLinkOk(d) {
+        return (d.role == 'tutor' && !('providerId' in d))
+            || (d.role == 'prestador' && d.providerId is string
+                && getAfter(/databases/$(database)/documents/providers/$(d.providerId)).data.ownerUserId == me());
+      }
+      allow read: if signedIn() && me() == uid;
+      allow create: if signedIn() && me() == uid && validUser(incoming()) && providerLinkOk(incoming());
+      allow update: if signedIn() && me() == uid && validUser(incoming())
+        && ((incoming().role == resource.data.role && incoming().get('providerId', null) == resource.data.get('providerId', null))
+            || (resource.data.role == 'tutor' && providerLinkOk(incoming())));
+      allow delete: if false;
+    }
+
+    /* ---------------- clientes (id = uid do tutor) ---------------- */
+    match /customers/{uid} {
+      function validCustomer(d) {
+        return d.keys().hasOnly(['name','phone','email','cityId','neighborhood','waOptIn','marketingOptIn','createdAt','updatedAt','linkedProviderUids'])
+          && str(d.name, 1, 120) && (d.phone == '' || e164(d.phone)) && str(d.email, 0, 254)
+          && str(d.cityId, 0, 60) && str(d.neighborhood, 0, 80) && d.waOptIn is bool && d.marketingOptIn is bool
+          && d.linkedProviderUids is list && d.linkedProviderUids.size() <= 200;
+      }
+      // o prestador só lê clientes que o vincularam (ao reservar)
+      allow read: if signedIn() && (me() == uid || me() in resource.data.linkedProviderUids);
+      allow create: if signedIn() && me() == uid && validCustomer(incoming()) && incoming().linkedProviderUids.size() == 0;
+      allow update: if signedIn() && me() == uid && validCustomer(incoming())
+        && onlyChanged(['name','phone','email','cityId','neighborhood','waOptIn','marketingOptIn','linkedProviderUids','updatedAt']);
+      allow delete: if false;
+    }
+
+    /* ---------------- pets ---------------- */
+    match /pets/{petId} {
+      function validPet(d) {
+        return d.keys().hasOnly(['ownerId','name','species','breed','size','birthYear','weightKg','temperament','careNotes','vaccinesUpToDate','avatarSeed','photoPath','linkedProviderUids','updatedAt'])
+          && str(d.name, 1, 60) && d.species in speciesAll() && d.size in sizesAll() && str(d.breed, 0, 80)
+          && intIn(d.birthYear, 1990, 2100) && d.weightKg is number && d.weightKg > 0 && d.weightKg < 150
+          && str(d.temperament, 0, 500) && str(d.careNotes, 0, 1000) && d.vaccinesUpToDate is bool && d.avatarSeed is int
+          && optStr(d, 'photoPath', 300) && d.linkedProviderUids is list && d.linkedProviderUids.size() <= 50;
+      }
+      allow read: if signedIn() && (resource.data.ownerId == me() || me() in resource.data.linkedProviderUids);
+      allow create: if signedIn() && incoming().ownerId == me() && validPet(incoming()) && incoming().linkedProviderUids.size() == 0;
+      allow update: if signedIn() && resource.data.ownerId == me() && !changed().hasAny(['ownerId']) && validPet(incoming());
+      allow delete: if signedIn() && resource.data.ownerId == me();
+    }
+
+    /* ---------------- prestadores ---------------- */
+    match /providers/{providerId} {
+      function validProviderText(d) {
+        return str(d.name, 2, 120) && str(d.tagline, 0, 160) && str(d.bio, 0, 2000) && str(d.neighborhood, 0, 80)
+          && d.amenities is list && d.amenities.size() <= 30 && d.openingHours is list && d.openingHours.size() <= 7
+          && d.cancellationPolicy in ['flexivel','moderada','rigida'] && listOf(d.species, speciesAll(), 1, 2) && listOf(d.sizes, sizesAll(), 1, 5)
+          && d.whatsappOptIn is bool
+          // WhatsApp público só com opt-in e igual ao número configurado
+          && (d.get('whatsappPublic', null) == null
+              || (d.whatsappOptIn == true && e164(d.whatsappPublic)
+                  && d.whatsappPublic == get(/databases/$(database)/documents/settings/$(providerId)).data.waNumber));
+      }
+      allow read: if resource.data.status == 'publicado' || (signedIn() && resource.data.ownerUserId == me());
+      // cadastro: sempre em análise, sem nota, sem destaque, sem verificação
+      allow create: if signedIn() && incoming().ownerUserId == me() && validProviderText(incoming())
+        && incoming().status == 'em_analise' && incoming().rating == null && incoming().reviewCount == 0
+        && incoming().ratingBreakdown == [0, 0, 0, 0, 0] && incoming().featured == false && incoming().isDemo == false
+        && incoming().verification == {'identity': false, 'background': false, 'venue': false}
+        && incoming().whatsappOptIn == false && !('whatsappPublic' in incoming())
+        && incoming().plan in ['essencial','profissional','pro'] && incoming().kind in ['autonomo','empresa']
+        && listOf(incoming().categories, categories(), 1, 8) && incoming().priceFromCents == 0 && str(incoming().slug, 3, 90);
+      // edição: só os campos de perfil (status, plano, nota, destaque, verificação etc. são do servidor)
+      allow update: if signedIn() && resource.data.ownerUserId == me() && validProviderText(incoming())
+        && onlyChanged(['name','tagline','bio','neighborhood','amenities','openingHours','whatsappOptIn','whatsappPublic','cancellationPolicy','species','sizes','updatedAt']);
+      allow delete: if false;
+    }
+
+    match /settings/{providerId} {
+      function validSettings(d) {
+        return d.keys().hasOnly(['waNumber','waProvider','waConnected','autoConfirmationRequest','reminder24h','reminder2h','postServiceReview','reactivationDays','firstResponseSlaMin','autoReplyOutsideHours','instantBooking','ownerUid','updatedAt'])
+          && (d.waNumber == '' || e164(d.waNumber)) && d.waProvider in ['cloud_api','z_api','evolution','desconectado']
+          && intIn(d.reactivationDays, 1, 365) && intIn(d.firstResponseSlaMin, 1, 1440)
+          && d.autoConfirmationRequest is bool && d.reminder24h is bool && d.reminder2h is bool && d.postServiceReview is bool
+          && d.autoReplyOutsideHours is bool && d.instantBooking is bool;
+      }
+      allow read: if signedIn() && resource.data.ownerUid == me();
+      allow create: if signedIn() && incoming().ownerUid == me() && incoming().waConnected == false && validSettings(incoming())
+        && getAfter(/databases/$(database)/documents/providers/$(providerId)).data.ownerUserId == me();
+      allow update: if signedIn() && resource.data.ownerUid == me() && !changed().hasAny(['ownerUid','waConnected']) && validSettings(incoming());
+      allow delete: if false;
+    }
+
+    /* ---------------- serviços e pacotes ---------------- */
+    match /services/{serviceId} {
+      function validService(d) {
+        return d.keys().hasOnly(['providerId','ownerUid','category','name','description','priceCents','unit','durationMin','species','sizes','active','updatedAt'])
+          && d.category in categories() && str(d.name, 2, 120) && str(d.description, 0, 1000) && intIn(d.priceCents, 0, 10000000)
+          && d.unit in ['passeio','hora','diaria','servico','visita','mes'] && intIn(d.durationMin, 5, 44640)
+          && listOf(d.species, speciesAll(), 1, 2) && listOf(d.sizes, sizesAll(), 1, 5) && d.active is bool;
+      }
+      allow read: if resource.data.active == true || (signedIn() && resource.data.ownerUid == me());
+      allow create: if signedIn() && incoming().ownerUid == me() && ownsProvider(incoming().providerId) && validService(incoming());
+      allow update: if signedIn() && resource.data.ownerUid == me() && !changed().hasAny(['ownerUid','providerId']) && validService(incoming());
+      allow delete: if signedIn() && resource.data.ownerUid == me();
+    }
+
+    match /packages/{packageId} {
+      function validPackage(d) {
+        let svc = get(/databases/$(database)/documents/services/$(d.serviceId)).data;
+        return d.keys().hasOnly(['providerId','ownerUid','serviceId','name','description','sessions','priceCents','fullPriceCents','validityDays','active','popular','soldCount','updatedAt'])
+          && svc.providerId == d.providerId && str(d.name, 2, 120) && str(d.description, 0, 1000) && intIn(d.sessions, 1, 365)
+          && money(d.priceCents) && d.fullPriceCents == svc.priceCents * d.sessions && intIn(d.validityDays, 1, 730)
+          && d.active is bool && d.popular is bool;
+      }
+      allow read: if resource.data.active == true || (signedIn() && resource.data.ownerUid == me());
+      allow create: if signedIn() && incoming().ownerUid == me() && ownsProvider(incoming().providerId) && incoming().soldCount == 0 && validPackage(incoming());
+      allow update: if signedIn() && resource.data.ownerUid == me() && !changed().hasAny(['ownerUid','providerId','soldCount']) && validPackage(incoming());
+      allow delete: if signedIn() && resource.data.ownerUid == me();
+    }
+
+    /* ---------------- reservas ---------------- */
+    match /bookings/{bookingId} {
+      function petOk(ids, i) { return ids.size() <= i || get(/databases/$(database)/documents/pets/$(ids[i])).data.ownerId == me(); }
+      function priceOk(d, svc) {
+        return d.priceCents == svc.priceCents * (svc.category in ['hospedagem','creche','banho_tosa'] ? d.petIds.size() : 1);
+      }
+      function baseShape(d, svc) {
+        return d.keys().hasOnly(['code','providerId','customerId','customerUid','providerOwnerUid','petIds','serviceId','start','end','startAt','endAt','priceCents','status','channel','notes','location','reviewed','timeline','createdAt'])
+          && str(d.code, 4, 12) && d.petIds is list && d.petIds.size() <= 3 && str(d.notes, 0, 1000)
+          && d.location in ['casa_tutor','local_prestador','busca_e_entrega'] && d.reviewed == false
+          && d.startAt is timestamp && d.endAt == d.startAt + duration.value(svc.durationMin, 'm')
+          && str(d.start, 20, 30) && str(d.end, 20, 30) && d.timeline is list && d.timeline.size() == 1
+          && svc.providerId == d.providerId && priceOk(d, svc);
+      }
+      // tutor: pedido sempre "pendente", preço = serviço × unidades, horário futuro, pets próprios
+      function tutorCreate(d) {
+        let svc = get(/databases/$(database)/documents/services/$(d.serviceId)).data;
+        let prov = providerOf(d.providerId);
+        return d.customerUid == me() && d.customerId == me() && prov.status == 'publicado' && d.providerOwnerUid == prov.ownerUserId
+          && svc.active == true && d.status == 'pendente' && d.channel == 'app' && d.petIds.size() >= 1
+          && petOk(d.petIds, 0) && petOk(d.petIds, 1) && petOk(d.petIds, 2)
+          && d.startAt > request.time && baseShape(d, svc);
+      }
+      // prestador: agendamento manual confirmado, apenas para cliente da carteira
+      function providerCreate(d) {
+        let svc = get(/databases/$(database)/documents/services/$(d.serviceId)).data;
+        return d.providerOwnerUid == me() && ownsProvider(d.providerId) && d.status == 'confirmado'
+          && d.channel in ['app','whatsapp','balcao'] && d.customerUid == d.customerId
+          && me() in get(/databases/$(database)/documents/customers/$(d.customerId)).data.linkedProviderUids
+          && d.startAt > request.time - duration.value(12, 'h') && baseShape(d, svc);
+      }
+      function tutorUpdate() {
+        return resource.data.customerUid == me() && (
+          (incoming().status == 'cancelado' && resource.data.status in ['pendente','aguardando_cliente','confirmado']
+             && onlyChanged(['status','timeline','cancelReason','updatedAt']) && timelineAppended()
+             && optStr(incoming(), 'cancelReason', 500))
+          || (resource.data.status == 'aguardando_cliente' && incoming().status in ['confirmado','cancelado','pendente']
+             && onlyChanged(['status','waConfirmation','timeline','updatedAt']) && timelineAppended())
+          || (onlyChanged(['reviewed']) && incoming().reviewed == true
+             && existsAfter(/databases/$(database)/documents/reviews/$(bookingId)))
+        );
+      }
+      function providerUpdate() {
+        return resource.data.providerOwnerUid == me() && (
+          (canTransition(resource.data.status, incoming().status)
+             && onlyChanged(['status','timeline','waConfirmation','cancelReason','updatedAt']) && timelineAppended()
+             && optStr(incoming(), 'cancelReason', 500))
+          || (resource.data.status in ['pendente','aguardando_cliente','confirmado'] && incoming().status == resource.data.status
+             && onlyChanged(['start','end','startAt','endAt','timeline','updatedAt']) && incoming().startAt > request.time
+             && incoming().endAt - incoming().startAt == resource.data.endAt - resource.data.startAt && timelineAppended())
+        );
+      }
+      allow read: if signedIn() && (resource.data.customerUid == me() || resource.data.providerOwnerUid == me());
+      allow create: if signedIn() && (tutorCreate(incoming()) || providerCreate(incoming()));
+      allow update: if signedIn() && incoming().priceCents == resource.data.priceCents && (tutorUpdate() || providerUpdate());
+      allow delete: if false;
+    }
+
+    // compras de pacote: só leitura (escrita exige função de servidor)
+    match /purchases/{purchaseId} {
+      allow read: if signedIn() && (resource.data.customerUid == me() || resource.data.providerOwnerUid == me());
+      allow write: if false;
+    }
+
+    /* ---------------- avaliações (id = bookingId → 1 por reserva) ---------------- */
+    match /reviews/{bookingId} {
+      function reviewable(d) {
+        let b = get(/databases/$(database)/documents/bookings/$(bookingId)).data;
+        return b.customerUid == me() && b.status == 'concluido' && b.reviewed == false
+          && request.time < b.endAt + duration.value(14, 'd')
+          && d.providerId == b.providerId && d.bookingId == bookingId;
+      }
+      function validReview(d) {
+        return d.keys().hasOnly(['providerId','bookingId','authorName','petName','petSpecies','serviceName','rating','aspects','text','createdAt','verifiedBooking'])
+          && intIn(d.rating, 1, 5) && d.aspects.keys().hasOnly(['pontualidade','cuidado','comunicacao'])
+          && intIn(d.aspects.pontualidade, 1, 5) && intIn(d.aspects.cuidado, 1, 5) && intIn(d.aspects.comunicacao, 1, 5)
+          && str(d.authorName, 1, 60) && str(d.petName, 0, 60) && d.petSpecies in speciesAll() && str(d.serviceName, 0, 120)
+          && str(d.text, 0, 2000) && d.verifiedBooking == true;
+      }
+      allow read: if true;
+      allow create: if signedIn() && validReview(incoming()) && reviewable(incoming());
+      // o prestador só responde (nota e texto do tutor são imutáveis)
+      allow update: if signedIn() && ownsProvider(resource.data.providerId) && onlyChanged(['reply'])
+        && incoming().reply.keys().hasOnly(['text','createdAt']) && str(incoming().reply.text, 1, 1000);
+      allow delete: if false;
+    }
+
+    /* ---------------- favoritos ---------------- */
+    match /favorites/{uid} {
+      allow read, delete: if signedIn() && me() == uid;
+      allow create, update: if signedIn() && me() == uid && incoming().keys().hasOnly(['providerIds'])
+        && incoming().providerIds is list && incoming().providerIds.size() <= 200;
+    }
+
+    /* ---------------- CRM WhatsApp ---------------- */
+    match /conversations/{conversationId} {
+      allow read: if signedIn() && resource.data.providerOwnerUid == me();
+      allow update: if signedIn() && resource.data.providerOwnerUid == me()
+        && onlyChanged(['status','tags','unread','assignedTo','lastMessageAt','lastMessagePreview','updatedAt'])
+        && incoming().status in ['novo','aguardando_atendimento','aguardando_cliente','agendado','resolvido']
+        && incoming().tags is list && incoming().tags.size() <= 20 && intIn(incoming().unread, 0, 100000)
+        && str(incoming().lastMessagePreview, 0, 120);
+      allow create, delete: if false;   // criadas pelo servidor (webhook)
+
+      match /messages/{messageId} {
+        function convOwner() { return get(/databases/$(database)/documents/conversations/$(conversationId)).data.providerOwnerUid; }
+        allow read: if signedIn() && convOwner() == me();
+        // o prestador só enfileira mensagens próprias; o envio real e os status são do servidor
+        allow create: if signedIn() && convOwner() == me() && incoming().providerOwnerUid == me()
+          && incoming().keys().hasOnly(['conversationId','from','text','at','delivery','template','buttons','providerOwnerUid'])
+          && incoming().conversationId == conversationId && incoming().from == 'prestador' && incoming().delivery == 'enviando'
+          && str(incoming().text, 1, 4096) && optStr(incoming(), 'template', 128)
+          && (!('buttons' in incoming()) || (incoming().buttons is list && incoming().buttons.size() <= 10));
+        allow update, delete: if false;
+      }
+    }
+
+    match /templates/{templateId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // qualquer outro caminho: negado
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

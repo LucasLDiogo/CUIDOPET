@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/* Cuidopê — layout: app de marketplace com faixa de busca no topo, cards em grade e painéis com barra lateral.
+   Paleta: verde-pinheiro (marca), amarelo bolinha-de-tênis (ação), coral (afeto/alerta), papel esverdeado. */
+:root {
+  --bg: #f4f7f1;
+  --surface: #ffffff;
+  --surface-2: #ebf0e6;
+  --surface-3: #dfe7d9;
+  --ink: #10261f;
+  --muted: #56685f;
+  --line: #d6dfd1;
+  --brand: #1c5b47;
+  --brand-2: #2a7a5f;
+  --brand-ink: #ffffff;
+  --ball: #d6ef4a;
+  --ball-ink: #10261f;
+  --coral: #ef6447;
+  --wa: #1fa855;
+  --wa-bubble: #dcf8c6;
+  --wa-bg: #efeae2;
+  --ok: #2a8f5f;
+  --warn: #c98612;
+  --danger: #c93c3c;
+  --info: #3570b8;
+  --shadow: 0 1px 2px rgb(16 38 31 / 0.06), 0 8px 24px -12px rgb(16 38 31 / 0.18);
+  --font-display: "Bricolage Grotesque", "Onest", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Onest", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1915; --surface: #12231e; --surface-2: #182e27; --surface-3: #213a32; --ink: #e7efe9; --muted: #9db1a6; --line: #26413a;
+    --brand: #5cc59b; --brand-2: #7fd6b2; --brand-ink: #0c1915; --ball: #d6ef4a; --ball-ink: #10261f; --coral: #ff8a6e; --wa: #2bc067;
+    --wa-bubble: #1f4d36; --wa-bg: #0f1c18; --ok: #4fc58a; --warn: #f0b44a; --danger: #ff7373; --info: #7aa9ea;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1915; --surface: #12231e; --surface-2: #182e27; --surface-3: #213a32; --ink: #e7efe9; --muted: #9db1a6; --line: #26413a;
+  --brand: #5cc59b; --brand-2: #7fd6b2; --brand-ink: #0c1915; --ball: #d6ef4a; --ball-ink: #10261f; --coral: #ff8a6e; --wa: #2bc067;
+  --wa-bubble: #1f4d36; --wa-bg: #0f1c18; --ok: #4fc58a; --warn: #f0b44a; --danger: #ff7373; --info: #7aa9ea;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-2: var(--brand-2);
+  --color-brand-ink: var(--brand-ink);
+  --color-ball: var(--ball);
+  --color-ball-ink: var(--ball-ink);
+  --color-coral: var(--coral);
+  --color-wa: var(--wa);
+  --color-wa-bubble: var(--wa-bubble);
+  --color-wa-bg: var(--wa-bg);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-body);
+  --shadow-card: var(--shadow);
+}
+
+html, body, #root { min-height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+h1, h2, h3, .font-display { font-family: var(--font-display); letter-spacing: -0.02em; text-wrap: balance; }
+.tabular { font-variant-numeric: tabular-nums; }
+:focus-visible { outline: 2.5px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+::selection { background: var(--ball); color: var(--ball-ink); }
+
+@layer components {
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; border-radius: 12px; padding: .62rem 1rem; font-weight: 600; font-size: .94rem; line-height: 1.2; transition: transform .12s ease, background-color .15s ease, box-shadow .15s ease; cursor: pointer; white-space: nowrap; }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn-primary { background: var(--brand); color: var(--brand-ink); }
+  .btn-primary:hover { background: var(--brand-2); }
+  .btn-ball { background: var(--ball); color: var(--ball-ink); box-shadow: inset 0 -2px 0 rgb(16 38 31 / .15); }
+  .btn-ball:hover { filter: brightness(1.04); }
+  .btn-ghost { background: transparent; color: var(--ink); }
+  .btn-ghost:hover { background: var(--surface-2); }
+  .btn-outline { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+  .btn-outline:hover { border-color: var(--muted); }
+  .btn-wa { background: var(--wa); color: #fff; }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid color-mix(in oklab, var(--danger) 40%, transparent); }
+  .btn-sm { padding: .4rem .7rem; font-size: .85rem; border-radius: 10px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; }
+  .input { width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: .62rem .8rem; color: var(--ink); font-size: .95rem; }
+  .input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px color-mix(in oklab, var(--brand) 20%, transparent); }
+  .label { display: block; font-size: .8rem; font-weight: 600; color: var(--muted); margin-bottom: .3rem; letter-spacing: .01em; }
+  .chip { display: inline-flex; align-items: center; gap: .35rem; border-radius: 999px; padding: .22rem .62rem; font-size: .78rem; font-weight: 600; background: var(--surface-2); color: var(--ink); white-space: nowrap; }
+  .eyebrow { font-size: .72rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+  .gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .scroll-x { overflow-x: auto; scrollbar-width: none; }
+  .scroll-x::-webkit-scrollbar { display: none; }
+}
+
+@keyframes rise { from { opacity: .0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.rise { animation: rise .35s ease both; }
+@keyframes pulse-dot { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+.pulse-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

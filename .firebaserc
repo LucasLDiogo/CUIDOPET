@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "cuidope-exemplo-dev",
+    "producao": "cuidope-exemplo-prod"
+  }
+}

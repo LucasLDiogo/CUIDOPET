@@ -1,0 +1,62 @@
+# Configuração mínima para `supabase start` (Supabase CLI v2).
+# Valores locais apenas — nenhum segredo aqui. Segredos das functions ficam em supabase/.env (ver .env.example).
+project_id = "cuidope"
+
+[api]
+enabled = true
+port = 54321
+# Somente o schema public é exposto via PostgREST. O schema `app` (helpers internos) NÃO é exposto.
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+
+[storage]
+enabled = true
+file_size_limit = "5MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173", "http://localhost:4173", "http://127.0.0.1:5173"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+minimum_password_length = 10
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+otp_length = 6
+otp_expiry = 3600
+max_frequency = "60s"
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+
+# O webhook da Meta não envia JWT: a autenticidade é garantida pela assinatura X-Hub-Signature-256.
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+# Envio exige JWT válido de um usuário (prestador). A função também revalida o dono da conversa.
+[functions.whatsapp-send]
+verify_jwt = true
