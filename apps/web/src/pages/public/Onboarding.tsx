@@ -7,6 +7,7 @@ import { CategoryIcon } from '../../components/CategoryIcon';
 import { ErrorBox, useToast } from '../../components/ui';
 import { cx } from '../../lib/format';
 import type { CategoryId, PlanCode, Provider } from '../../domain/types';
+import { IMG } from '../../lib/media';
 
 const PLANS: { code: PlanCode; name: string; price: string; items: string[]; hi?: boolean }[] = [
   { code: 'essencial', name: 'Essencial', price: 'Grátis', items: ['Perfil público com avaliações', 'Até 2 serviços', 'Pedidos de agendamento', 'Botão do WhatsApp no perfil'] },
@@ -26,11 +27,13 @@ export function Onboarding() {
   };
   return (
     <div>
-      <section className="gutter bg-brand text-brand-ink">
-        <div className="mx-auto grid max-w-7xl gap-8 py-12 lg:grid-cols-2 lg:py-16">
+      <section className="gutter relative overflow-hidden bg-[#1838cc] text-white">
+        <div className="dots pointer-events-none absolute inset-0 opacity-20" aria-hidden="true" />
+        <div className="relative mx-auto grid max-w-7xl gap-8 py-12 lg:grid-cols-2 lg:py-16">
           <div>
+            {IMG.prestador && <img src={IMG.prestador} alt="" className="mb-6 h-40 w-full rounded-[28px] object-cover shadow-lift sm:h-56" />}
             <span className="chip bg-ball text-ball-ink">Para passeadores, pet sitters, pet houses e pet shops</span>
-            <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-5xl">Mais clientes, menos tempo respondendo WhatsApp</h1>
+            <h1 className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">Mais clientes, menos tempo respondendo WhatsApp</h1>
             <p className="mt-4 max-w-lg text-lg opacity-90">Seu perfil aparece para tutores do seu bairro. Os pedidos chegam organizados e a confirmação sai sozinha no WhatsApp.</p>
             <ul className="mt-6 grid gap-3 sm:grid-cols-2">
               {[[CalendarCheck, 'Agenda com capacidade por serviço'], [MessageCircle, 'CRM do WhatsApp com status'], [Package, 'Pacotes com saldo por cliente'], [Star, 'Avaliações verificadas'], [Users, 'Ficha de clientes e pets'], [BadgeCheck, 'Selo de identidade verificada']].map(([I, t]) => {

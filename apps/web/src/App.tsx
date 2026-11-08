@@ -11,6 +11,7 @@ import { BookingWizard } from './pages/public/BookingWizard';
 import { LoginPage } from './pages/public/Login';
 import { Onboarding } from './pages/public/Onboarding';
 import { LegalPage } from './pages/public/Legal';
+import { ClubePage, ClubeSaldo } from './pages/public/Clube';
 import { TutorLayout, MyBookings, BookingDetail, MyPets, Favorites, MyPackages } from './pages/tutor/Tutor';
 import { Dashboard } from './pages/provider/Dashboard';
 import { Agenda } from './pages/provider/Agenda';
@@ -32,6 +33,7 @@ const routes: RouteObject[] = [
       { path: 'anunciar', element: <Onboarding /> },
       { path: 'privacidade', element: <LegalPage kind="privacidade" /> },
       { path: 'termos', element: <LegalPage kind="termos" /> },
+      { path: 'clube', element: <ClubePage /> },
       {
         path: 'conta', element: <RequireRole role="tutor"><TutorLayout /></RequireRole>,
         children: [
@@ -40,6 +42,7 @@ const routes: RouteObject[] = [
           { path: 'pets', element: <MyPets /> },
           { path: 'favoritos', element: <Favorites /> },
           { path: 'pacotes', element: <MyPackages /> },
+          { path: 'clube', element: <ClubeSaldo /> },
         ],
       },
       { path: '*', element: <NotFound /> },

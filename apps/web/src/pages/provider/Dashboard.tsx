@@ -5,6 +5,7 @@ import { PageHead } from '../../components/ProviderLayout';
 import { PetAvatar, Spinner, StatusPill, useToast } from '../../components/ui';
 import { cx, fmtTime, formatBRL, relTime } from '../../lib/format';
 import type { DashboardData } from '../../domain/types';
+import { petPhoto } from '../../lib/media';
 
 export function Dashboard() {
   const dash = useQuery((r) => r.getDashboard(), []);
@@ -44,7 +45,7 @@ export function Dashboard() {
               {today.map((b) => (
                 <li key={b.id} className="flex flex-wrap items-center gap-3 py-3">
                   <span className="w-12 font-display text-lg font-bold tabular">{fmtTime(b.start)}</span>
-                  <div className="flex -space-x-2">{b.pets.map((p) => <PetAvatar key={p.id} species={p.species} seed={p.avatarSeed} size={34} className="ring-2 ring-surface" />)}</div>
+                  <div className="flex -space-x-2">{b.pets.map((p) => <PetAvatar key={p.id} species={p.species} seed={p.avatarSeed} src={petPhoto(p.id)} size={34} className="ring-2 ring-surface" />)}</div>
                   <div className="min-w-0 flex-1"><b className="block truncate">{b.pets.map((p) => p.name).join(', ')} · {b.service.name}</b><span className="text-sm text-muted">{b.customer.name}</span></div>
                   <StatusPill status={b.status} perspective="prestador" />
                   {b.status === 'confirmado' && <button className="btn btn-outline btn-sm" onClick={() => act(b.id, 'em_atendimento', 'Check-in feito — tutor avisado no WhatsApp')}>Check-in</button>}

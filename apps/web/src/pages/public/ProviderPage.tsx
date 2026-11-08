@@ -7,6 +7,7 @@ import { Avatar, Cover, Empty, RatingBadge, Spinner, Stars, useToast } from '../
 import { NotFound } from '../../components/layout';
 import { cx, formatBRL, formatPhone, relTime } from '../../lib/format';
 import type { Review } from '../../domain/types';
+import { providerAvatar, providerCover } from '../../lib/media';
 
 const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -28,16 +29,16 @@ export function ProviderPage() {
 
   return (
     <div className="pb-28 lg:pb-0">
-      <Cover seed={p.coverSeed} className="h-44 sm:h-60" />
+      <Cover seed={p.coverSeed} img={providerCover(p)} className="h-52 sm:h-72" />
       <div className="gutter mx-auto max-w-7xl">
-        <div className="-mt-14 flex flex-wrap items-end gap-4">
-          <Avatar name={p.name} seed={p.avatarSeed} size={112} className="ring-[6px] ring-bg" />
-          <div className="min-w-0 flex-1 pb-1">
+        <div className="relative z-[1] -mt-14 flex flex-wrap items-start gap-4">
+          <Avatar name={p.name} seed={p.avatarSeed} src={providerAvatar(p.slug)} size={112} className="ring-[6px] ring-bg" />
+          <div className="order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:flex-1 sm:pt-[60px]">
             <div className="flex flex-wrap gap-1.5">{p.categories.map((c) => <span key={c} className="chip bg-surface">{catLabel(c)}</span>)}{p.isDemo && <span className="chip bg-ball/50">Perfil fictício (demo)</span>}</div>
-            <h1 className="mt-2 text-3xl font-extrabold sm:text-4xl">{p.name}</h1>
+            <h1 className="mt-2 text-3xl font-semibold sm:text-4xl">{p.name}</h1>
             <p className="text-muted">{p.tagline}</p>
           </div>
-          <button onClick={toggleFav} className="btn btn-outline" aria-pressed={fav}><Heart size={17} className="text-coral" fill={fav ? 'currentColor' : 'none'} />{fav ? 'Salvo' : 'Salvar'}</button>
+          <button onClick={toggleFav} className="btn btn-outline order-2 ml-auto mt-[60px] sm:order-3 sm:ml-0" aria-pressed={fav}><Heart size={17} className="text-coral" fill={fav ? 'currentColor' : 'none'} />{fav ? 'Salvo' : 'Salvar'}</button>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm">

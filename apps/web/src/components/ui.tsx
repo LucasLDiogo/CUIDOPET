@@ -5,25 +5,16 @@ import { STATUS_LABEL, STATUS_LABEL_PROVIDER } from '../domain/rules';
 import { cx } from '../lib/format';
 
 /* ---------- marca ---------- */
-export function Logo({ className = '', compact = false }: { className?: string; compact?: boolean }) {
-  return (
-    <span className={cx('inline-flex items-center gap-2 font-display font-extrabold text-[1.32rem] tracking-tight text-ink', className)}>
-      <svg viewBox="0 0 64 64" className="h-8 w-8 shrink-0" aria-hidden="true">
-        <rect width="64" height="64" rx="18" fill="var(--brand)" />
-        <g fill="var(--ball)"><ellipse cx="32" cy="40" rx="11" ry="9" /><circle cx="18" cy="28" r="5" /><circle cx="26" cy="19" r="5" /><circle cx="38" cy="19" r="5" /><circle cx="46" cy="28" r="5" /></g>
-      </svg>
-      {!compact && <span>cuidopê</span>}
-    </span>
-  );
-}
+export { Logo } from './brand';
 
 /* ---------- avatares gerados (sem fotos de terceiros) ---------- */
-const HUES = [152, 78, 18, 200, 42, 330, 260, 110, 0, 175];
+const HUES = [262, 85, 25, 230, 60, 300, 250, 150, 10, 200];
 const hue = (seed: number) => HUES[Math.abs(seed) % HUES.length];
 export function initials(name: string) { return name.replace(/[—–-].*$/, '').split(/\s+/).filter((w) => w.length > 2 || /^[A-Z]/.test(w)).slice(0, 2).map((w) => w[0]).join('').toUpperCase(); }
 
-export function Avatar({ name, seed, size = 44, className = '' }: { name: string; seed: number; size?: number; className?: string }) {
+export function Avatar({ name, seed, size = 44, className = '', src }: { name: string; seed: number; size?: number; className?: string; src?: string }) {
   const h = hue(seed);
+  if (src) return <img src={src} alt="" width={size} height={size} loading="lazy" decoding="async" className={cx('shrink-0 rounded-full object-cover', className)} style={{ width: size, height: size }} />;
   return (
     <span aria-hidden="true" className={cx('inline-grid shrink-0 place-items-center rounded-full font-display font-bold', className)}
       style={{ width: size, height: size, fontSize: size * 0.38, background: `oklch(0.86 0.09 ${h})`, color: `oklch(0.3 0.08 ${h})` }}>
@@ -32,8 +23,9 @@ export function Avatar({ name, seed, size = 44, className = '' }: { name: string
   );
 }
 
-export function PetAvatar({ species, seed, size = 40, className = '' }: { species: Species; seed: number; size?: number; className?: string }) {
+export function PetAvatar({ species, seed, size = 40, className = '', src }: { species: Species; seed: number; size?: number; className?: string; src?: string }) {
   const h = hue(seed + 3); const Icon = species === 'gato' ? Cat : Dog;
+  if (src) return <img src={src} alt="" width={size} height={size} loading="lazy" decoding="async" className={cx('shrink-0 rounded-[38%] object-cover', className)} style={{ width: size, height: size }} />;
   return (
     <span aria-hidden="true" className={cx('inline-grid shrink-0 place-items-center rounded-[38%]', className)} style={{ width: size, height: size, background: `oklch(0.9 0.07 ${h})`, color: `oklch(0.35 0.09 ${h})` }}>
       <Icon size={size * 0.55} strokeWidth={2.1} />
@@ -42,7 +34,16 @@ export function PetAvatar({ species, seed, size = 40, className = '' }: { specie
 }
 
 /** Capa ilustrada gerada a partir de uma semente: colinas + patinhas. */
-export function Cover({ seed, className = '', children }: { seed: number; className?: string; children?: ReactNode }) {
+export function Cover({ seed, className = '', children, img, alt = '' }: { seed: number; className?: string; children?: ReactNode; img?: string; alt?: string }) {
+  if (img) {
+    return (
+      <div className={cx('zoom-img relative overflow-hidden bg-surface-2', className)}>
+        <img src={img} alt={alt} loading="lazy" decoding="async" className="img-cover absolute inset-0" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgb(7_13_38/.35)] via-transparent to-transparent" />
+        {children}
+      </div>
+    );
+  }
   const h = hue(seed); const h2 = hue(seed + 4);
   const paws = Array.from({ length: 7 }, (_, i) => ({ x: ((seed * 37 + i * 61) % 100), y: ((seed * 13 + i * 29) % 60) + 6, r: ((seed + i) % 3) * 2 + 5, rot: (seed * 11 + i * 47) % 360 }));
   return (
@@ -125,13 +126,16 @@ export function Delivery({ d }: { d: 'enviando' | 'enviado' | 'entregue' | 'lido
 
 /* ---------- estados ---------- */
 export function Spinner({ label = 'Carregando…' }: { label?: string }) {
-  return <div className="flex items-center justify-center gap-2 py-16 text-muted" role="status"><Loader2 className="animate-spin" size={18} />{label}</div>;
+  return <div className="flex items-center justify-center gap-2 py-16 text-muted" role="status"><Loader2 className="animate-spin text-brand" size={18} />{label}</div>;
 }
-export function Empty({ icon, title, children, action }: { icon?: ReactNode; title: string; children?: ReactNode; action?: ReactNode }) {
+export function CardSkeletons({ n = 6 }: { n?: number }) {
+  return <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-hidden="true">{Array.from({ length: n }, (_, i) => <div key={i} className="skeleton h-80" />)}</div>;
+}
+export function Empty({ icon, title, children, action, image }: { icon?: ReactNode; title: string; children?: ReactNode; action?: ReactNode; image?: string }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-line px-6 py-12 text-center">
-      {icon && <div className="grid h-12 w-12 place-items-center rounded-2xl bg-surface-2 text-brand">{icon}</div>}
-      <div className="font-display text-lg font-bold">{title}</div>
+    <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-line bg-surface/60 px-6 py-12 text-center">
+      {image ? <img src={image} alt="" loading="lazy" className="h-36 w-56 rounded-[28px] object-cover shadow-card" /> : icon && <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-soft text-brand">{icon}</div>}
+      <div className="font-display text-xl font-semibold">{title}</div>
       {children && <p className="max-w-md text-sm text-muted">{children}</p>}
       {action}
     </div>

@@ -5,6 +5,7 @@ import { useQuery } from '../../lib/repo';
 import { PageHead } from '../../components/ProviderLayout';
 import { Avatar, PetAvatar, Segmented, Spinner } from '../../components/ui';
 import { cx, formatBRL, formatPhone, relTime } from '../../lib/format';
+import { personAvatar, petPhoto } from '../../lib/media';
 
 export function CustomersPage() {
   const { data, loading } = useQuery((r) => r.listCustomers(), []);
@@ -30,8 +31,8 @@ export function CustomersPage() {
               const away = r.lastVisit ? (now - Date.parse(r.lastVisit)) / 86400000 : 0;
               return (
                 <tr key={r.customer.id} className="border-b border-line last:border-0">
-                  <td className="p-3"><div className="flex items-center gap-2"><Avatar name={r.customer.name} seed={r.customer.name.length * 3} size={34} /><div><b>{r.customer.name}</b><div className="text-xs tabular text-muted">{formatPhone(r.customer.phone)} · {r.customer.neighborhood}</div></div></div></td>
-                  <td className="p-3"><div className="flex items-center gap-1">{r.pets.map((p) => <span key={p.id} className="inline-flex items-center gap-1"><PetAvatar species={p.species} seed={p.avatarSeed} size={24} />{p.name}</span>)}</div></td>
+                  <td className="p-3"><div className="flex items-center gap-2"><Avatar name={r.customer.name} src={personAvatar(r.customer.name)} seed={r.customer.name.length * 3} size={34} /><div><b>{r.customer.name}</b><div className="text-xs tabular text-muted">{formatPhone(r.customer.phone)} · {r.customer.neighborhood}</div></div></div></td>
+                  <td className="p-3"><div className="flex items-center gap-1">{r.pets.map((p) => <span key={p.id} className="inline-flex items-center gap-1"><PetAvatar species={p.species} seed={p.avatarSeed} src={petPhoto(p.id)} size={24} />{p.name}</span>)}</div></td>
                   <td className="p-3 tabular">{r.bookings}</td>
                   <td className={cx('p-3', away > 30 && 'font-semibold text-warn')}>{r.lastVisit ? relTime(r.lastVisit) : '—'}</td>
                   <td className="p-3">{r.activePackages[0] ? <span className="chip bg-ball/50">{r.activePackages[0].sessionsTotal - r.activePackages[0].sessionsUsed} restantes</span> : <span className="text-muted">—</span>}</td>

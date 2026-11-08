@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router';
 import { HandHeart, Mail, PawPrint } from 'lucide-react';
 import { BACKEND, errorMessage, useRepo } from '../../lib/repo';
 import { ErrorBox, Logo, useToast } from '../../components/ui';
+import { IMG, img } from '../../lib/media';
 
 export function LoginPage() {
   const repo = useRepo(); const nav = useNavigate(); const [sp] = useSearchParams(); const toast = useToast();
@@ -21,18 +22,22 @@ export function LoginPage() {
   return (
     <div className="gutter mx-auto grid max-w-5xl gap-10 py-12 lg:grid-cols-2">
       <div>
-        <Logo />
-        <h1 className="mt-6 text-4xl font-extrabold">Entrar</h1>
+        <div className="relative h-48 overflow-hidden rounded-[28px] bg-surface-2 sm:h-56">
+          {IMG.login && <img src={IMG.login} alt="" className="img-cover absolute inset-0" />}
+          <div className="absolute inset-0 bg-gradient-to-t from-[rgb(7_13_38/.75)] via-[rgb(7_13_38/.1)] to-transparent" />
+          <div className="absolute bottom-4 left-4 flex items-center gap-3 text-white"><Logo className="text-white" /></div>
+        </div>
+        <h1 className="mt-6 text-4xl font-semibold">Entrar</h1>
         <p className="mt-2 text-muted">Uma conta só para agendar como tutor ou gerenciar seu negócio como prestador.</p>
         {(BACKEND === 'demo' || import.meta.env.VITE_DEMO_LOGIN === 'true') && (
           <div className="mt-6 space-y-3">
             <div className="eyebrow">Acesso de demonstração</div>
-            <button disabled={busy} onClick={() => demo('tutor')} className="card flex w-full items-center gap-4 p-4 text-left transition hover:border-brand">
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-ball text-ball-ink"><PawPrint /></span>
+            <button disabled={busy} onClick={() => demo('tutor')} className="card lift flex w-full items-center gap-4 p-4 text-left hover:border-brand">
+              {img('pessoa-ana-av') ? <img src={img('pessoa-ana-av')} alt="" className="h-12 w-12 rounded-2xl object-cover" /> : <span className="grid h-12 w-12 place-items-center rounded-2xl bg-ball text-ball-ink"><PawPrint /></span>}
               <span><b className="block">Entrar como tutora (Ana)</b><span className="text-sm text-muted">Tem o Thor (golden) e a Mia (gata). Agendamentos, pacotes e avaliações.</span></span>
             </button>
-            <button disabled={busy} onClick={() => demo('prestador')} className="card flex w-full items-center gap-4 p-4 text-left transition hover:border-brand">
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand text-brand-ink"><HandHeart /></span>
+            <button disabled={busy} onClick={() => demo('prestador')} className="card lift flex w-full items-center gap-4 p-4 text-left hover:border-brand">
+              {img('pessoa-carla-av') ? <img src={img('pessoa-carla-av')} alt="" className="h-12 w-12 rounded-2xl object-cover" /> : <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand text-brand-ink"><HandHeart /></span>}
               <span><b className="block">Entrar como prestadora (Carla Pet House)</b><span className="text-sm text-muted">Painel com agenda, CRM do WhatsApp, pacotes, clientes e avaliações.</span></span>
             </button>
           </div>

@@ -1,10 +1,41 @@
 {
-  "name": "Cuidopê — cuidado pet",
+  "name": "Cuidopê — cuidado pet perto de você",
   "short_name": "Cuidopê",
+  "description": "Passeio, pet sitter, pet house, creche, banho e tosa com avaliações reais e confirmação no WhatsApp.",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#F5F7F2",
-  "theme_color": "#1C5B47",
+  "background_color": "#1838CC",
+  "theme_color": "#1838CC",
   "lang": "pt-BR",
-  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+  "categories": [
+    "lifestyle",
+    "shopping"
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
 }

@@ -9,6 +9,7 @@ import { canTransition } from '../../domain/rules';
 import { cx, fmtDateTime, fmtTime, formatBRL, formatPhone } from '../../lib/format';
 import type { BookingStatus } from '../../domain/types';
 import type { ProviderBooking } from '../../data/repository';
+import { petPhoto } from '../../lib/media';
 
 const H0 = 7, H1 = 21, PX = 46; // px por hora
 const startOfWeek = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
@@ -110,7 +111,7 @@ export function Agenda() {
             <li key={b.id}>
               <button onClick={() => setOpenId(b.id)} className="card flex w-full flex-wrap items-center gap-3 p-3 text-left hover:border-brand">
                 <span className="w-24 shrink-0 text-sm"><b className="block capitalize">{new Date(b.start).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</b><span className="tabular text-muted">{fmtTime(b.start)}</span></span>
-                <div className="flex -space-x-2">{b.pets.map((p) => <PetAvatar key={p.id} species={p.species} seed={p.avatarSeed} size={32} className="ring-2 ring-surface" />)}</div>
+                <div className="flex -space-x-2">{b.pets.map((p) => <PetAvatar key={p.id} species={p.species} seed={p.avatarSeed} src={petPhoto(p.id)} size={32} className="ring-2 ring-surface" />)}</div>
                 <span className="min-w-0 flex-1"><b className="block truncate">{b.pets.map((p) => p.name).join(', ')} · {b.service.name}</b><span className="text-sm text-muted">{b.customer.name} · {b.code}</span></span>
                 <StatusPill status={b.status} perspective="prestador" />
                 <b className="w-24 text-right tabular">{b.priceCents ? formatBRL(b.priceCents) : 'pacote'}</b>
@@ -165,7 +166,7 @@ function BookingDrawer({ b, onClose }: { b: ProviderBooking; onClose: () => void
           <div className="eyebrow">Ficha do pet</div>
           {b.pets.map((p) => (
             <div key={p.id} className="rounded-2xl border border-line p-3">
-              <div className="flex items-center gap-2"><PetAvatar species={p.species} seed={p.avatarSeed} size={40} /><div><b>{p.name}</b><div className="text-xs text-muted">{p.breed} · {SIZE_SHORT[p.size]} · {p.weightKg} kg · {new Date().getFullYear() - p.birthYear} anos</div></div></div>
+              <div className="flex items-center gap-2"><PetAvatar species={p.species} seed={p.avatarSeed} src={petPhoto(p.id)} size={40} /><div><b>{p.name}</b><div className="text-xs text-muted">{p.breed} · {SIZE_SHORT[p.size]} · {p.weightKg} kg · {new Date().getFullYear() - p.birthYear} anos</div></div></div>
               <p className="mt-2 text-sm"><b>Temperamento:</b> {p.temperament}</p>
               <p className="text-sm"><b>Cuidados:</b> {p.careNotes}</p>
               <p className={cx('mt-1 text-xs font-semibold', p.vaccinesUpToDate ? 'text-ok' : 'text-danger')}>{p.vaccinesUpToDate ? 'Vacinas em dia' : 'Vacinas pendentes — peça a carteirinha'}</p>

@@ -228,6 +228,41 @@ await step('Tema escuro renderiza', async () => {
   await page.evaluate(() => { document.documentElement.dataset.theme = 'light'; });
 });
 
+await step('Abertura: tela com a logo aparece e libera o app', async () => {
+  const { page: s, ctx } = await newPage({ viewport: { width: 1280, height: 800 } });
+  await s.goto(`${BASE}/`);
+  await s.getByRole('status', { name: 'Carregando o Cuidopê' }).waitFor({ state: 'visible', timeout: 4000 });
+  await s.getByRole('status', { name: 'Carregando o Cuidopê' }).waitFor({ state: 'detached', timeout: 8000 });
+  await s.getByRole('heading', { name: /Quem cuida do seu pet/ }).waitFor();
+  await ctx.close();
+});
+
+await step('Cabeçalho: busca livre e menu de serviços com fotos', async () => {
+  await go(page, '/');
+  await page.getByLabel('Buscar serviços').fill('banho');
+  await page.getByLabel('Buscar serviços').press('Enter');
+  await page.waitForURL(/q=banho/);
+  await page.getByText(/resultado/).first().waitFor();
+  await page.getByRole('button', { name: /Todos os serviços/ }).click();
+  await page.getByRole('link', { name: /Veterinário em casa/ }).first().waitFor();
+  await page.screenshot({ path: `${OUT}/15-menu-servicos.png` });
+  await page.keyboard.press('Escape');
+});
+
+await step('Tutor: Clube Patinhas e carteirinha de vacinação', async () => {
+  await page.getByRole('button', { name: 'Tutor', exact: true }).click();
+  await page.waitForURL(/#\/conta$/);
+  await go(page, '/conta/clube');
+  await page.getByText('Seu nível').waitFor();
+  await page.getByText('patinhas', { exact: true }).first().waitFor();
+  await go(page, '/conta/pets');
+  await page.getByRole('button', { name: /Carteirinha de vacinação/ }).first().click();
+  await page.getByText('V10 (múltipla)').waitFor();
+  await page.screenshot({ path: `${OUT}/16-carteirinha.png` });
+  await go(page, '/clube');
+  await page.getByRole('heading', { name: 'Clube Patinhas', level: 1 }).waitFor();
+});
+
 /* ---------------- celular ---------------- */
 const { page: m } = await newPage({ ...require('playwright').devices['iPhone 13'] });
 for (const [label, hash] of [['início', '/'], ['busca', '/buscar?cidade=passo-fundo-rs'], ['perfil', '/p/casa-da-carla-pet-house'], ['agendar', '/agendar/casa-da-carla-pet-house']]) {

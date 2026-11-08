@@ -4,6 +4,7 @@ import { useQuery } from '../lib/repo';
 import { Avatar, Logo } from './ui';
 import { DemoBar, ScrollTop, ThemeToggle } from './layout';
 import { cx } from '../lib/format';
+import { providerAvatar } from '../lib/media';
 
 export function ProviderLayout() {
   const me = useQuery((r) => r.getMyProvider(), []);
@@ -32,7 +33,7 @@ export function ProviderLayout() {
           <div className="flex h-16 items-center px-5"><Link to="/"><Logo /></Link></div>
           {p && (
             <div className="mx-3 mb-3 flex items-center gap-2.5 rounded-2xl bg-surface-2 p-2.5">
-              <Avatar name={p.name} seed={p.avatarSeed} size={38} />
+              <Avatar name={p.name} seed={p.avatarSeed} src={providerAvatar(p.slug)} size={38} />
               <div className="min-w-0"><b className="block truncate text-sm">{p.name}</b><span className="text-xs capitalize text-muted">Plano {p.plan === 'pro' ? 'Pro Regional' : p.plan}{p.status === 'em_analise' ? ' · em análise' : ''}</span></div>
             </div>
           )}

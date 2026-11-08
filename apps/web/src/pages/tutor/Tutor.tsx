@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useParams } from 'react-router';
-import { Bell, CalendarDays, Check, CheckCheck, Heart, MapPin, MessageCircle, Package, PawPrint, Pencil, Plus, Star, Trash2 } from 'lucide-react';
+import { Award, Bell, CalendarDays, Check, CheckCheck, Heart, MapPin, MessageCircle, Package, PawPrint, Pencil, Plus, RotateCcw, ShieldCheck, Star, Syringe, Trash2 } from 'lucide-react';
 import { errorMessage, useQuery, useRepo } from '../../lib/repo';
 import { SIZE_LABEL, SIZE_SHORT } from '../../data/demo/catalog';
 import { Avatar, Empty, ErrorBox, Modal, PetAvatar, Segmented, Spinner, StatusPill, useToast } from '../../components/ui';
@@ -8,14 +8,15 @@ import { ProviderCard } from '../../components/ProviderCard';
 import { cx, fmtDateTime, fmtTime, fmtWeekday, formatBRL, relTime } from '../../lib/format';
 import type { Pet, PetSize, Review, Species } from '../../domain/types';
 import type { TutorBooking } from '../../data/repository';
+import { personAvatar, petPhoto, providerAvatar } from '../../lib/media';
 
 export function TutorLayout() {
   const me = useQuery((r) => r.getMe(), []);
-  const tabs = [['/conta', 'Agendamentos', CalendarDays], ['/conta/pets', 'Meus pets', PawPrint], ['/conta/pacotes', 'Pacotes', Package], ['/conta/favoritos', 'Favoritos', Heart]] as const;
+  const tabs = [['/conta', 'Agendamentos', CalendarDays], ['/conta/pets', 'Meus pets', PawPrint], ['/conta/pacotes', 'Pacotes', Package], ['/conta/clube', 'Clube', Award], ['/conta/favoritos', 'Favoritos', Heart]] as const;
   return (
     <div className="gutter mx-auto max-w-6xl py-6">
       <div className="flex items-center gap-3">
-        {me.data && <Avatar name={me.data.customer.name} seed={me.data.customer.name.length * 7} size={48} />}
+        {me.data && <Avatar name={me.data.customer.name} seed={me.data.customer.name.length * 7} src={personAvatar(me.data.customer.name)} size={56} className="ring-4 ring-surface" />}
         <div><div className="eyebrow">Minha conta</div><h1 className="text-2xl font-extrabold">Olá, {me.data?.customer.name.split(' ')[0] ?? ''}</h1></div>
       </div>
       <nav className="scroll-x mt-5 flex gap-1 border-b border-line" aria-label="Minha conta">
@@ -65,20 +66,22 @@ export function MyBookings() {
 function BookingRow({ b }: { b: TutorBooking }) {
   const d = new Date(b.start);
   return (
-    <li>
-      <Link to={`/conta/agendamento/${b.id}`} className="card flex items-center gap-4 p-4 transition hover:border-brand">
-        <div className="w-14 shrink-0 rounded-2xl bg-surface-2 py-2 text-center">
+    <li className="card lift relative flex items-center gap-4 p-4 hover:border-brand">
+      <Link to={`/conta/agendamento/${b.id}`} className="absolute inset-0 z-0 rounded-[22px]" aria-label={`Abrir ${b.service.name} de ${fmtDateTime(b.start)}`} />
+        <div className="pointer-events-none w-14 shrink-0 rounded-2xl bg-brand-soft py-2 text-center text-brand">
           <div className="text-[0.68rem] font-bold uppercase text-muted">{d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</div>
           <div className="font-display text-2xl font-extrabold leading-none">{d.getDate()}</div>
           <div className="text-[0.7rem] tabular text-muted">{fmtTime(b.start)}</div>
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="pointer-events-none min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2"><b className="truncate">{b.service.name}</b><StatusPill status={b.status} /></div>
           <div className="truncate text-sm text-muted">{b.provider.name} · {b.pets.map((p) => p.name).join(', ')}</div>
           <div className="text-xs text-muted">Protocolo {b.code}{b.packagePurchaseId ? ' · pacote' : ''}</div>
         </div>
-        <div className="hidden text-right sm:block"><b className="tabular">{b.priceCents ? formatBRL(b.priceCents) : 'Pacote'}</b></div>
-      </Link>
+        <div className="relative z-[1] flex flex-col items-end gap-2">
+          <b className="hidden tabular sm:block">{b.priceCents ? formatBRL(b.priceCents) : 'Pacote'}</b>
+          {b.status === 'concluido' && <Link to={`/agendar/${b.provider.slug}?svc=${b.serviceId}`} className="btn btn-outline btn-sm"><RotateCcw size={14} />Agendar de novo</Link>}
+        </div>
     </li>
   );
 }
@@ -140,7 +143,7 @@ export function BookingDetail() {
       <aside>
         <div className="sticky top-24 overflow-hidden rounded-[28px] border-[6px] border-ink bg-wa-bg shadow-card">
           <div className="flex items-center gap-2 bg-[#075e54] px-4 py-3 text-white">
-            <Avatar name={b.provider.name} seed={b.provider.avatarSeed} size={34} />
+            <Avatar name={b.provider.name} seed={b.provider.avatarSeed} src={providerAvatar(b.provider.slug)} size={34} />
             <div className="min-w-0"><b className="block truncate text-sm">{b.provider.name}</b><span className="text-[0.7rem] opacity-80">conta comercial · via Cuidopê</span></div>
           </div>
           <div className="space-y-2 p-3 text-sm">
@@ -210,7 +213,7 @@ export function MyPets() {
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         {data?.pets.map((p) => (
           <div key={p.id} className="card p-5">
-            <div className="flex items-center gap-3"><PetAvatar species={p.species} seed={p.avatarSeed} size={56} /><div className="min-w-0 flex-1"><div className="text-lg font-bold">{p.name}</div><div className="text-sm text-muted">{p.breed} · {new Date().getFullYear() - p.birthYear} anos · {p.weightKg} kg</div></div>
+            <div className="flex items-center gap-3"><PetAvatar species={p.species} seed={p.avatarSeed} src={petPhoto(p.id)} size={64} /><div className="min-w-0 flex-1"><div className="text-lg font-bold">{p.name}</div><div className="text-sm text-muted">{p.breed} · {new Date().getFullYear() - p.birthYear} anos · {p.weightKg} kg</div></div>
               <button className="btn btn-ghost btn-sm" onClick={() => setEdit(p)} aria-label={`Editar ${p.name}`}><Pencil size={16} /></button>
               <button className="btn btn-ghost btn-sm text-danger" aria-label={`Remover ${p.name}`} onClick={async () => { try { await repo.deletePet(p.id); toast('Pet removido'); } catch (e) { toast(errorMessage(e), 'erro'); } }}><Trash2 size={16} /></button>
             </div>
@@ -219,6 +222,7 @@ export function MyPets() {
               <div><dt className="text-xs text-muted">Temperamento</dt><dd>{p.temperament}</dd></div>
               <div><dt className="text-xs text-muted">Cuidados</dt><dd>{p.careNotes}</dd></div>
             </dl>
+            <VaccineCard pet={p} />
           </div>
         ))}
       </div>
@@ -276,6 +280,56 @@ export function MyPackages() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ---------- carteirinha de vacinação (inspirada no "perfil do pet" dos grandes pet shops) ---------- */
+type Vac = { name: string; last: Date; next: Date };
+function vaccinesFor(p: Pet): Vac[] {
+  // Demonstração: datas derivadas do id do pet (estáveis). No produto, o tutor/vet registra cada dose.
+  const h = [...p.id].reduce((a, c) => a + c.charCodeAt(0), 0);
+  const names = p.species === 'gato' ? ['V5 (quíntupla felina)', 'Antirrábica', 'FeLV'] : ['V10 (múltipla)', 'Antirrábica', 'Gripe canina', 'Giárdia'];
+  const today = Date.now();
+  return names.map((name, i) => {
+    let ago = 40 + ((h * (i + 3)) % 300);
+    if (!p.vaccinesUpToDate && i === 0) ago = 380;
+    const last = new Date(today - ago * 86400000); const next = new Date(last.getTime() + 365 * 86400000);
+    return { name, last, next };
+  });
+}
+function VaccineCard({ pet }: { pet: Pet }) {
+  const [open, setOpen] = useState(false);
+  const list = vaccinesFor(pet);
+  const now = Date.now();
+  const late = list.filter((v) => v.next.getTime() < now).length;
+  const soon = list.filter((v) => v.next.getTime() >= now && v.next.getTime() - now < 45 * 86400000).length;
+  return (
+    <div className="mt-4 rounded-2xl border border-line bg-surface-2/60">
+      <button onClick={() => setOpen(!open)} aria-expanded={open} className="flex w-full items-center gap-3 p-3 text-left">
+        <span className={cx('grid h-9 w-9 place-items-center rounded-xl', late ? 'bg-[color-mix(in_oklab,var(--danger)_14%,transparent)] text-danger' : 'bg-brand-soft text-brand')}><Syringe size={17} /></span>
+        <span className="flex-1"><b className="block text-sm">Carteirinha de vacinação</b><span className="text-xs text-muted">{late ? `${late} vacina(s) atrasada(s)` : soon ? `${soon} vence(m) nos próximos 45 dias` : 'Tudo em dia'}</span></span>
+        <span className="text-xs font-bold text-brand">{open ? 'Fechar' : 'Ver'}</span>
+      </button>
+      {open && (
+        <ul className="divide-y divide-line border-t border-line px-3 text-sm">
+          {list.map((v) => {
+            const st = v.next.getTime() < now ? 'atrasada' : v.next.getTime() - now < 45 * 86400000 ? 'vence logo' : 'em dia';
+            return (
+              <li key={v.name} className="flex flex-wrap items-center gap-2 py-2.5">
+                <ShieldCheck size={15} className={st === 'atrasada' ? 'text-danger' : st === 'vence logo' ? 'text-warn' : 'text-ok'} />
+                <b className="flex-1">{v.name}</b>
+                <span className="text-xs text-muted">última {v.last.toLocaleDateString('pt-BR')} · próxima {v.next.toLocaleDateString('pt-BR')}</span>
+                <span className={cx('chip', st === 'atrasada' ? 'text-danger' : st === 'vence logo' ? 'text-warn' : 'text-ok')}>{st}</span>
+              </li>
+            );
+          })}
+          <li className="flex flex-wrap items-center justify-between gap-2 py-3">
+            <span className="text-xs text-muted">Registro de demonstração. Vacine em casa com um veterinário a domicílio.</span>
+            <Link to="/buscar?cat=vet_domicilio" className="btn btn-primary btn-sm"><Syringe size={14} />Agendar vacina em casa</Link>
+          </li>
+        </ul>
+      )}
     </div>
   );
 }

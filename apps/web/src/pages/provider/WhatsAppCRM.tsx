@@ -6,6 +6,7 @@ import { Avatar, CONV_LABEL, ConvPill, Delivery, Empty, Modal, PetAvatar, Segmen
 import { fillTemplate, formatPhone } from '../../domain/rules';
 import { chatTime, cx, fmtDateTime, fmtTime, formatBRL, relTime } from '../../lib/format';
 import type { ConversationStatus, Customer, Conversation, WaTemplate } from '../../domain/types';
+import { personAvatar, petPhoto } from '../../lib/media';
 
 type Conv = Conversation & { customer: Customer };
 const FILTERS: { v: 'todas' | ConversationStatus; l: string }[] = [
@@ -58,7 +59,7 @@ export function WhatsAppCRM() {
               {list.map((c) => (
                 <li key={c.id}>
                   <button onClick={() => setSp({ c: c.id })} className={cx('flex w-full gap-3 border-b border-line px-3 py-3 text-left hover:bg-surface-2', sel?.id === c.id && 'bg-surface-2')}>
-                    <Avatar name={c.customer.name} seed={c.customer.name.length * 3} size={42} />
+                    <Avatar name={c.customer.name} src={personAvatar(c.customer.name)} seed={c.customer.name.length * 3} size={42} />
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-2"><b className="truncate">{c.customer.name}</b><span className={cx('ml-auto shrink-0 text-xs', c.unread ? 'font-bold text-wa' : 'text-muted')}>{chatTime(c.lastMessageAt)}</span></span>
                       <span className="flex items-center gap-2"><span className="truncate text-sm text-muted">{c.lastMessagePreview}</span>{c.unread > 0 && <span className="ml-auto grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-wa px-1.5 text-[0.7rem] font-bold text-white">{c.unread}</span>}</span>
@@ -124,7 +125,7 @@ function Chat({ conv, onBack }: { conv: Conv; onBack: () => void }) {
     <>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-3 py-2.5">
         <button className="btn btn-ghost btn-sm lg:hidden" onClick={onBack} aria-label="Voltar"><ArrowLeft size={18} /></button>
-        <Avatar name={conv.customer.name} seed={conv.customer.name.length * 3} size={38} />
+        <Avatar name={conv.customer.name} src={personAvatar(conv.customer.name)} seed={conv.customer.name.length * 3} size={38} />
         <div className="min-w-0 flex-1"><b className="block truncate">{conv.customer.name}</b><span className="whitespace-nowrap text-xs tabular text-muted">{formatPhone(conv.phone)}</span></div>
         <select className="input order-last w-full py-1.5 text-xs font-semibold sm:order-none sm:w-auto" value={conv.status} onChange={async (e) => { await repo.setConversationStatus(conv.id, e.target.value as ConversationStatus); toast(`Movida para “${CONV_LABEL[e.target.value as ConversationStatus]}”`, 'info'); }} aria-label="Status da conversa">
           {(Object.keys(CONV_LABEL) as ConversationStatus[]).map((s) => <option key={s} value={s}>{CONV_LABEL[s]}</option>)}
@@ -209,7 +210,7 @@ function CustomerPanel({ conv }: { conv: Conv }) {
   const [tag, setTag] = useState('');
   return (
     <div className="space-y-5 p-4">
-      <div className="text-center"><Avatar name={conv.customer.name} seed={conv.customer.name.length * 3} size={64} /><div className="mt-2 font-bold">{conv.customer.name}</div><div className="text-sm tabular text-muted">{formatPhone(conv.customer.phone)}</div><div className="text-xs text-muted">{conv.customer.neighborhood}</div></div>
+      <div className="text-center"><Avatar name={conv.customer.name} src={personAvatar(conv.customer.name)} seed={conv.customer.name.length * 3} size={64} /><div className="mt-2 font-bold">{conv.customer.name}</div><div className="text-sm tabular text-muted">{formatPhone(conv.customer.phone)}</div><div className="text-xs text-muted">{conv.customer.neighborhood}</div></div>
       <div className="flex flex-wrap justify-center gap-1.5 text-[0.7rem]">
         <span className={cx('chip', conv.customer.waOptIn ? 'text-ok' : 'text-danger')}>{conv.customer.waOptIn ? '✓ WhatsApp autorizado' : '✗ sem WhatsApp'}</span>
         <span className={cx('chip', conv.customer.marketingOptIn ? 'text-ok' : 'text-muted')}>{conv.customer.marketingOptIn ? '✓ aceita ofertas' : 'não aceita ofertas'}</span>
@@ -222,7 +223,7 @@ function CustomerPanel({ conv }: { conv: Conv }) {
       )}
       <div>
         <div className="eyebrow mb-2 flex items-center gap-1"><PawPrint size={12} />Pets</div>
-        {row?.pets.map((p) => <div key={p.id} className="mb-2 flex items-start gap-2 text-sm"><PetAvatar species={p.species} seed={p.avatarSeed} size={32} /><span><b>{p.name}</b> · {p.breed}<br /><span className="text-xs text-muted">{p.temperament}</span></span></div>)}
+        {row?.pets.map((p) => <div key={p.id} className="mb-2 flex items-start gap-2 text-sm"><PetAvatar species={p.species} seed={p.avatarSeed} src={petPhoto(p.id)} size={32} /><span><b>{p.name}</b> · {p.breed}<br /><span className="text-xs text-muted">{p.temperament}</span></span></div>)}
       </div>
       {!!row?.activePackages.length && (
         <div>
@@ -251,7 +252,7 @@ function NoConversation({ customerId, onBack }: { customerId: string; onBack: ()
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 bg-wa-bg p-8 text-center">
       <button className="btn btn-ghost btn-sm self-start lg:hidden" onClick={onBack}><ArrowLeft size={16} />Voltar</button>
-      <Avatar name={row.customer.name} seed={row.customer.name.length * 3} size={64} />
+      <Avatar name={row.customer.name} src={personAvatar(row.customer.name)} seed={row.customer.name.length * 3} size={64} />
       <div><b>{row.customer.name}</b><p className="text-sm text-muted">Sem conversa aberta nos últimos 30 dias.</p></div>
       {row.customer.marketingOptIn ? (
         <>
@@ -277,7 +278,7 @@ function Kanban({ convs, open }: { convs: Conv[]; open: (id: string) => void }) 
             <div className="mt-1 space-y-2">
               {items.map((c) => (
                 <button key={c.id} draggable onDragStart={(e) => e.dataTransfer.setData('text/plain', c.id)} onClick={() => open(c.id)} className="card block w-full p-3 text-left hover:border-brand">
-                  <div className="flex items-center gap-2"><Avatar name={c.customer.name} seed={c.customer.name.length * 3} size={28} /><b className="truncate text-sm">{c.customer.name}</b>{c.unread > 0 && <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-wa px-1 text-[0.65rem] font-bold text-white">{c.unread}</span>}</div>
+                  <div className="flex items-center gap-2"><Avatar name={c.customer.name} src={personAvatar(c.customer.name)} seed={c.customer.name.length * 3} size={28} /><b className="truncate text-sm">{c.customer.name}</b>{c.unread > 0 && <span className="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-wa px-1 text-[0.65rem] font-bold text-white">{c.unread}</span>}</div>
                   <p className="mt-1.5 line-clamp-2 text-xs text-muted">{c.lastMessagePreview}</p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1">{c.tags.slice(0, 2).map((t) => <span key={t} className="chip px-1.5 py-0 text-[0.62rem]">{t}</span>)}<span className="ml-auto text-[0.65rem] text-muted">{chatTime(c.lastMessageAt)}</span></div>
                   <Sla c={c} />

@@ -6,7 +6,8 @@ import { CATEGORIES, CITIES, SIZE_SHORT } from '../../data/demo/catalog';
 import { CategoryIcon } from '../../components/CategoryIcon';
 import { ProviderCard } from '../../components/ProviderCard';
 import { MiniMap } from '../../components/MiniMap';
-import { Empty, ErrorBox, Modal, Segmented, Spinner, useToast } from '../../components/ui';
+import { CardSkeletons, Empty, ErrorBox, Modal, Segmented, useToast } from '../../components/ui';
+import { IMG } from '../../lib/media';
 import type { CategoryId, PetSize, SearchFilters, Species } from '../../domain/types';
 import { cx } from '../../lib/format';
 
@@ -129,8 +130,8 @@ export function SearchPage() {
           )}
           <p className="mt-2 text-xs text-muted">Ordem por relevância: nota (ponderada pelo nº de avaliações), tempo de resposta e verificações. Destaques pagos não alteram a nota.</p>
 
-          {res.error ? <ErrorBox error={res.error} /> : res.loading ? <Spinner /> : !res.data?.length ? (
-            <div className="mt-6"><Empty icon={<Search />} title="Nenhum prestador com esses filtros">Tente remover {active.length ? `“${active[active.length - 1].l}”` : 'algum filtro'} ou buscar em outra cidade. Não relaxamos filtros sem avisar.</Empty></div>
+          {res.error ? <ErrorBox error={res.error} /> : res.loading ? <div className="mt-4"><CardSkeletons /></div> : !res.data?.length ? (
+            <div className="mt-6"><Empty icon={<Search />} image={IMG.gato} title="Nenhum prestador com esses filtros">Tente remover {active.length ? `“${active[active.length - 1].l}”` : 'algum filtro'} ou buscar em outra cidade. Não relaxamos filtros sem avisar.</Empty></div>
           ) : view === 'mapa' ? (
             <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_360px]">
               <MiniMap items={res.data} active={hover} onPick={(s) => nav(`/p/${s}`)} className="h-[420px] xl:h-[620px]" />

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { ArrowLeft, ArrowRight, CalendarDays, Check, CheckCheck, Clock, Hourglass, MessageCircle, Package, Plus, ShieldCheck } from 'lucide-react';
 import { errorMessage, useQuery, useRepo, useSession } from '../../lib/repo';
@@ -9,6 +9,8 @@ import { PetForm } from '../tutor/Tutor';
 import { bookingPriceCents, formatPhone } from '../../domain/rules';
 import { cx, fmtTime, fmtWeekday, formatBRL } from '../../lib/format';
 import type { Booking, Booking as B } from '../../domain/types';
+import { petPhoto, providerAvatar } from '../../lib/media';
+import { gsap, pawConfetti, reducedMotion } from '../../lib/motion';
 
 const STEPS = ['Serviço', 'Pet', 'Horário', 'Confirmar'] as const;
 
@@ -123,7 +125,7 @@ export function BookingWizard() {
               {me.loading ? <Spinner /> : compatPets.map(({ pet, ok }) => (
                 <label key={pet.id} className={cx('card flex items-center gap-3 p-4', ok ? 'cursor-pointer' : 'opacity-60', petIds.includes(pet.id) && 'border-brand ring-1 ring-brand')}>
                   <input type="checkbox" disabled={!ok} checked={petIds.includes(pet.id)} onChange={(e) => setPetIds(e.target.checked ? [...petIds, pet.id] : petIds.filter((x) => x !== pet.id))} className="h-4 w-4 accent-[var(--brand)]" />
-                  <PetAvatar species={pet.species} seed={pet.avatarSeed} />
+                  <PetAvatar species={pet.species} seed={pet.avatarSeed} src={petPhoto(pet.id)} />
                   <span className="min-w-0 flex-1"><b>{pet.name}</b><span className="block text-sm text-muted">{pet.breed} · {SIZE_SHORT[pet.size]} · {pet.weightKg} kg</span>{!ok && <span className="block text-xs font-semibold text-danger">Este serviço não atende {pet.species === 'gato' ? 'gatos' : `porte ${SIZE_SHORT[pet.size].toLowerCase()}`}.</span>}</span>
                 </label>
               ))}
@@ -197,7 +199,7 @@ export function BookingWizard() {
 
         <aside>
           <div className="card sticky top-24 space-y-3 p-5">
-            <div className="flex items-center gap-3"><Avatar name={p.name} seed={p.avatarSeed} size={44} /><div className="min-w-0"><b className="block truncate">{p.name}</b><span className="text-xs text-muted">{p.neighborhood}</span></div></div>
+            <div className="flex items-center gap-3"><Avatar name={p.name} seed={p.avatarSeed} src={providerAvatar(p.slug)} size={44} /><div className="min-w-0"><b className="block truncate">{p.name}</b><span className="text-xs text-muted">{p.neighborhood}</span></div></div>
             <dl className="space-y-2 border-t border-line pt-3 text-sm">
               <Row k="Serviço" v={svc?.name ?? '—'} />
               {pkg && <Row k="Pacote" v={pkg.name} />}
@@ -217,13 +219,19 @@ const Row = ({ k, v }: { k: string; v: string }) => <div className="flex justify
 
 function Done({ b, providerName, serviceName, pets, wa }: { b: Booking; providerName: string; serviceName: string; pets: string; wa: boolean }) {
   const nav = useNavigate();
+  const okRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    pawConfetti(okRef.current);
+    if (!reducedMotion() && okRef.current) gsap.fromTo(okRef.current, { scale: 0, rotate: -90 }, { scale: 1, rotate: 0, duration: 0.8, ease: 'elastic.out(1, 0.5)' });
+  }, []);
   return (
     <div className="gutter mx-auto max-w-2xl py-10">
       <div className="rise card overflow-hidden">
-        <div className="bg-brand p-6 text-brand-ink">
-          <div className="grid h-12 w-12 place-items-center rounded-2xl bg-ball text-ball-ink"><Check size={26} /></div>
-          <h1 className="mt-3 text-2xl font-extrabold">Pedido enviado!</h1>
-          <p className="opacity-90">Protocolo <b className="tabular">{b.code}</b> · {serviceName} para {pets}</p>
+        <div className="relative overflow-hidden bg-[#1838cc] p-6 text-white">
+          <div className="dots pointer-events-none absolute inset-0 opacity-25" />
+          <div ref={okRef} className="relative grid h-14 w-14 place-items-center rounded-2xl bg-ball text-[#0b1640] shadow-lift"><Check size={30} strokeWidth={3} /></div>
+          <h1 className="relative mt-3 text-3xl font-semibold">Pedido enviado!</h1>
+          <p className="relative opacity-90">Protocolo <b className="tabular">{b.code}</b> · {serviceName} para {pets}</p>
         </div>
         <div className="space-y-5 p-6">
           <ol className="space-y-3">
